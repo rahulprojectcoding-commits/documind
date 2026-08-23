@@ -31,3 +31,5 @@ celerybeat.pid
 Thumbs.db
 
 documents/
+
+staticfiles/
