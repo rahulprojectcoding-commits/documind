@@ -1,0 +1,31 @@
+<div id="status-poll">
+    <div class="card">
+        <form
+            method="post"
+            action="{% url 'ask' document.id %}"
+            hx-post="{% url 'ask' document.id %}"
+            hx-target="#status-poll"
+            hx-swap="outerHTML"
+            hx-indicator="#ask-loading"
+        >
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit">Ask</button>
+            <span id="ask-loading" class="htmx-indicator">
+                <span class="spinner"></span>
+                <span style="color:var(--text-muted);font-size:0.9rem;">Thinking…</span>
+            </span>
+        </form>
+
+        {% if answer %}
+            <div class="answer-box">
+                <h3>Answer</h3>
+                <p style="margin:0;">{{ answer }}</p>
+            </div>
+        {% endif %}
+
+        {% if error %}
+            <div class="error-box">{{ error }}</div>
+        {% endif %}
+    </div>
+</div>

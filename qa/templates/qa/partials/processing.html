@@ -1,0 +1,8 @@
+<div id="status-poll" hx-get="{% url 'document_status' document.id %}" hx-trigger="every 2s" hx-swap="outerHTML">
+    <div class="card">
+        <p style="margin:0;color:var(--text-muted);">
+            <span class="status-badge processing">Processing</span>
+            &nbsp;This document is still being processed — this updates automatically.
+        </p>
+    </div>
+</div>

@@ -1,0 +1,16 @@
+{% extends "qa/base.html" %}
+
+{% block title %}DocuMind — Ask{% endblock %}
+
+{% block content %}
+    <h1>{{ document.file.name }}</h1>
+    <p class="subtitle">
+        <a href="{% url 'upload' %}">← Upload a different document</a>
+    </p>
+
+    {% if document.status == "ready" %}
+        {% include "qa/partials/ready.html" %}
+    {% else %}
+        {% include "qa/partials/processing.html" %}
+    {% endif %}
+{% endblock %}

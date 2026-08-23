@@ -1,0 +1,21 @@
+{% extends "qa/base.html" %}
+
+{% block title %}DocuMind — Verify{% endblock %}
+
+{% block content %}
+    <h1>Check your email</h1>
+    <p class="subtitle">We sent a 6-digit code to your email. Enter it below to verify your account.</p>
+
+    <div class="card">
+        <form method="post">
+            {% csrf_token %}
+            <label for="code">Verification code</label>
+            <input type="text" name="code" id="code" maxlength="6" autocomplete="one-time-code" placeholder="123456" required>
+            <button type="submit" style="margin-top:16px;">Verify</button>
+        </form>
+
+        {% if error %}
+            <div class="error-box">{{ error }}</div>
+        {% endif %}
+    </div>
+{% endblock %}
