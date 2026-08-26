@@ -65,6 +65,8 @@ def ask_view(request, document_id):
     return render(request, "qa/ask.html", context)
 
 
+
+
 def signup_view(request):
     if request.method == "POST":
         form = SignUpForm(request.POST)
@@ -124,3 +126,12 @@ def document_status_partial(request, document_id):
         return render(request, "qa/partials/ready.html", {"document": document, "form": form})
 
     return render(request, "qa/partials/processing.html", {"document": document})
+
+
+
+@login_required
+def delete_document_view(request, document_id):
+    document = get_object_or_404(Document, id=document_id, owner=request.user)
+    if request.method == "POST":
+        document.delete()
+    return redirect("upload")

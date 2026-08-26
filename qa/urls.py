@@ -12,4 +12,5 @@ urlpatterns = [
     path("api/documents/<int:pk>/", api_views.DocumentDetailView.as_view(), name="api_document_detail"),
     path("api/documents/<int:document_id>/ask/", api_views.AskAPIView.as_view(), name="api_ask"),
     path("verify/", views.verify_otp_view, name="verify_otp"),
+    path("documents/<int:document_id>/delete/", views.delete_document_view, name="delete_document"),
 ]

@@ -15,25 +15,29 @@
     </div>
 
     <div class="card">
-    <h2 style="margin-top:0;font-size:1.1rem;">Your documents</h2>
+        <h2 style="margin-top:0;font-size:1.1rem;">Your documents</h2>
 
-    {% if documents %}
-        <ul class="doc-grid">
-            {% for doc in documents %}
-                <li>
-                    <a href="{% url 'ask' doc.id %}" class="doc-card">
-                        <div class="doc-icon">{{ doc.file.name|slice:"-3:"|upper }}</div>
-                        <div class="doc-name">{{ doc.file.name|cut:"documents/" }}</div>
-                        <div class="doc-meta">
-                            <span class="doc-date">{{ doc.uploaded_at|date:"M j" }}</span>
-                            <span class="status-badge {{ doc.status }}">{{ doc.get_status_display }}</span>
-                        </div>
-                    </a>
-                </li>
-            {% endfor %}
-        </ul>
-    {% else %}
-        <p class="empty-state">No documents yet — upload one above.</p>
-    {% endif %}
-</div>
+        {% if documents %}
+            <ul class="doc-grid">
+                {% for doc in documents %}
+                    <li style="position:relative;">
+                        <a href="{% url 'ask' doc.id %}" class="doc-card">
+                            <div class="doc-icon">{{ doc.file.name|slice:"-3:"|upper }}</div>
+                            <div class="doc-name">{{ doc.file.name|cut:"documents/" }}</div>
+                            <div class="doc-meta">
+                                <span class="doc-date">{{ doc.uploaded_at|date:"M j" }}</span>
+                                <span class="status-badge {{ doc.status }}">{{ doc.get_status_display }}</span>
+                            </div>
+                        </a>
+                        <form method="post" action="{% url 'delete_document' doc.id %}" style="position:absolute;top:10px;right:10px;">
+                            {% csrf_token %}
+                            <button type="submit" onclick="return confirm('Delete this document?')" style="background:var(--danger-bg);color:var(--danger-text);border:none;border-radius:6px;padding:4px 8px;font-size:0.75rem;cursor:pointer;">✕</button>
+                        </form>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="empty-state">No documents yet — upload one above.</p>
+        {% endif %}
+    </div>
 {% endblock %}
