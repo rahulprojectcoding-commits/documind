@@ -38,6 +38,25 @@ Return grounded answer
 
 ---
 
+## 📸 Screenshots
+
+### Login
+![Login](screenshots/documind_login.png)
+
+### Sign Up
+![Sign Up](screenshots/documind_signup.png)
+
+### Email Verification (OTP)
+![OTP Verification](screenshots/otp_vericfication.png)
+
+### Upload Document
+![Upload](screenshots/upload_document.png)
+
+### Ask a Question (RAG in action)
+![Q&A](screenshots/doccumind_QA.png)
+
+---
+
 ## ✨ Why DocuMind?
 
 A conventional LLM application might send an entire document to the model for every question.
@@ -76,6 +95,7 @@ This keeps prompts focused, makes retrieval observable, and provides a practical
 | **Second factor** | Fresh email OTP on every login |
 | **Frontend** | Django templates + HTMX |
 | **API** | Django REST Framework + token authentication |
+| **Document management** | Upload, view status, delete (with cascade) |
 | **Containers** | Docker / Docker Compose |
 | **Production** | Gunicorn + nginx + Let's Encrypt |
 | **Hosting** | AWS EC2 |
@@ -130,6 +150,9 @@ Documents are owned by users and are filtered by the authenticated user in both 
 
 ### 🔌 REST API
 The same document and Q&A workflow can be accessed programmatically through a token-authenticated JSON API.
+
+### 🗑️ Delete documents
+Owned documents can be deleted directly from the upload page. Deletion cascades to all associated chunks and embeddings.
 
 ### 🌙 Dark mode
 The UI supports a persisted light/dark theme preference.
@@ -1352,6 +1375,7 @@ Potential future improvements include:
 [x] User/document isolation
 [x] Docker deployment
 [x] HTTPS
+[x] Delete documents
 [x] AWS EC2 deployment
 
 [ ] SMS OTP
