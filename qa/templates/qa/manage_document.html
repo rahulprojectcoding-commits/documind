@@ -1,0 +1,35 @@
+{% extends "qa/base.html" %}
+
+{% block title %}DocuMind — Manage document{% endblock %}
+
+{% block content %}
+<p class="breadcrumb"><a href="{% url 'upload' %}">← Your library</a></p>
+<section class="auth-standard manage-page">
+    <span class="eyebrow auth-eyebrow">DOCUMENT SETTINGS</span>
+    <h1>Manage document</h1>
+    <p class="subtitle">{{ document.file.name }} · uploaded {{ document.uploaded_at|date:"M j, Y" }}</p>
+    <div class="card auth-card">
+        <form method="post" class="stacked-form">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="primary-button">Save changes <span aria-hidden="true">→</span></button>
+        </form>
+    </div>
+    <div class="card manage-status">
+        <div class="section-heading"><h2>Processing status</h2><span class="status-badge {{ document.status }}">{{ document.get_status_display }}</span></div>
+        {% if document.processing_error %}<p class="processing-error">{{ document.processing_error }}</p>{% endif %}
+        {% if document.status == "failed" %}
+            <form method="post" action="{% url 'retry_document' document.id %}">{% csrf_token %}<button type="submit" class="small-action retry-action">Retry processing</button></form>
+        {% elif document.status == "ready" %}
+            <a class="small-action primary-action" href="{% url 'ask' document.id %}">Ask this document</a>
+        {% endif %}
+    </div>
+    <div class="danger-zone">
+        <h2>Delete this document</h2>
+        <p>Deletes the uploaded file, extracted chunks, and its collection assignment. Saved Q&A remains in your history.</p>
+        <form method="post" action="{% url 'delete_document' document.id %}" onsubmit="return confirm('Permanently delete this document?')">
+            {% csrf_token %}<button type="submit" class="danger-button">Delete document</button>
+        </form>
+    </div>
+</section>
+{% endblock %}

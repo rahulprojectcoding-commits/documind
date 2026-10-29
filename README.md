@@ -1447,6 +1447,81 @@ Python Developer · Django · RAG · Generative AI · AWS
 
 ---
 
+## 📚 Collections, citations, and operations
+
+The library supports collections for grouping PDFs and text files. Ask a question
+from a collection to search across its ready documents. Answers include source
+labels and excerpts; PDF excerpts keep their original page number. Question
+history and helpful/not-helpful feedback are saved to the account.
+
+Uploads accept PDF and TXT files up to 25 MB. Failed processing shows a
+user-facing reason where available and can be retried from the library. The
+/health/ endpoint checks the database connection for a container or uptime
+probe.
+
+### Persistent document uploads
+
+The production Compose file stays on EC2 as an untracked server configuration.
+The tracked docker-compose.ops.yml override adds a shared media volume, a Django
+health check, and bounded Docker logs. Before enabling that volume on an
+existing deployment, copy current uploads out of the old container:
+
+    mkdir -p ~/documind-media-staging
+    docker compose -f docker-compose.prod.yml cp web:/app/media/. ~/documind-media-staging/
+
+Apply both Compose files to create and attach the new volume:
+
+       docker compose -f docker-compose.prod.yml -f docker-compose.ops.yml up -d
+
+Then copy the saved files into the volume mounted at /app/media. The worker
+shares that volume. Keep the temporary copy until existing documents open:
+
+    docker compose -f docker-compose.prod.yml -f docker-compose.ops.yml cp ~/documind-media-staging/. web:/app/media/
+
+After initial migration, rebuild/deploy with the same two Compose files.
+
+### Nginx Docker DNS refresh
+
+Nginx can retain a container IP after Compose replaces the web container. In
+the proxy location, use Docker's embedded DNS resolver so the service name is
+looked up again:
+
+    resolver 127.0.0.11 valid=30s ipv6=off;
+    set $web_upstream web:8000;
+    proxy_pass http://$web_upstream;
+
+Keep the existing proxy headers, TLS, and request-size settings around these
+lines. Validate the Nginx config and reload Nginx after changing it.
+
+### Container log rotation
+
+Add this to each long-running service in production Compose (web, worker, nginx,
+db, and redis) to cap each JSON log at about 30 MB:
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+The application writes processing failures to container logs. Set LOG_LEVEL to
+INFO by default or DEBUG temporarily while troubleshooting.
+
+### PostgreSQL backups to S3
+
+The scripts scripts/backup_database.sh and scripts/backup_media.sh stream
+compressed database and uploaded-file backups directly to S3, so backups do not
+accumulate on the EC2 root disk. Configure an EC2 instance role with permission
+to upload to private S3 buckets, install the AWS CLI, and set the corresponding
+destination variables. Run:
+
+    BACKUP_S3_URI=s3://your-private-bucket/documind-backups bash scripts/backup_database.sh
+    MEDIA_BACKUP_S3_URI=s3://your-private-bucket/documind-media bash scripts/backup_media.sh
+
+Schedule both commands with cron after successful manual runs. Enable S3
+versioning and a lifecycle retention policy on the buckets, and periodically
+test restoring a database backup and a media archive.
+
 ## 📜 License
 
 Add the repository license here when one is selected, for example:

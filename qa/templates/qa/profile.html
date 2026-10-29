@@ -1,0 +1,28 @@
+{% extends "qa/base.html" %}
+
+{% block title %}DocuMind — Your profile{% endblock %}
+
+{% block content %}
+<p class="breadcrumb"><a href="{% url 'upload' %}">← Your library</a></p>
+<section class="auth-standard profile-page">
+    <span class="eyebrow auth-eyebrow">ACCOUNT</span>
+    <h1>Your profile</h1>
+    <p class="subtitle">Your DocuMind account and library overview.</p>
+    <div class="card profile-card">
+        <div class="profile-avatar">{{ request.user.username|first|upper }}</div>
+        <div><span class="eyebrow auth-eyebrow">USERNAME</span><p class="profile-value">{{ request.user.username }}</p></div>
+        <div><span class="eyebrow auth-eyebrow">EMAIL FOR OTP & RECOVERY</span><p class="profile-value">{{ request.user.email|default:"No email set" }}</p></div>
+        <div><span class="eyebrow auth-eyebrow">MEMBER SINCE</span><p class="profile-value">{{ request.user.date_joined|date:"F Y" }}</p></div>
+    </div>
+    <div class="card profile-stats">
+        <h2>Your documents</h2>
+        <div class="stats-grid"><div><strong>{{ document_count }}</strong><span>Total</span></div><div><strong>{{ ready_count }}</strong><span>Ready</span></div><div><strong>{{ processing_count }}</strong><span>Processing</span></div><div><strong>{{ failed_count }}</strong><span>Failed</span></div></div>
+        <a class="text-link" href="{% url 'upload' %}">Manage your library →</a>
+    </div>
+    <div class="card profile-security">
+        <h2>Account security</h2>
+        <p class="muted-copy">Password changes are confirmed through your email. You’ll still use a one-time code when you log in.</p>
+        <a class="small-action" href="{% url 'password_reset' %}">Reset password</a>
+    </div>
+</section>
+{% endblock %}

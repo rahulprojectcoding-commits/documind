@@ -1,16 +1,18 @@
 {% extends "qa/base.html" %}
 
-{% block title %}DocuMind — Ask{% endblock %}
+{% block title %}DocuMind — {{ document.title }}{% endblock %}
 
 {% block content %}
-    <h1>{{ document.file.name }}</h1>
-    <p class="subtitle">
-        <a href="{% url 'upload' %}">← Upload a different document</a>
-    </p>
-
-    {% if document.status == "ready" %}
-        {% include "qa/partials/ready.html" %}
-    {% else %}
-        {% include "qa/partials/processing.html" %}
-    {% endif %}
+<p class="breadcrumb"><a href="{% url 'upload' %}">← Your library</a>{% if document.collection %}<span>/</span><a href="{% url 'collection_ask' document.collection.id %}">{{ document.collection.name }}</a>{% endif %}</p>
+<div class="document-page-heading">
+    <div><span class="eyebrow auth-eyebrow">DOCUMENT Q&A</span><h1>{{ document.title }}</h1><p class="subtitle">{{ document.get_status_display }} · added {{ document.uploaded_at|date:"M j, Y" }}</p></div>
+    <a class="small-action" href="{% url 'manage_document' document.id %}">Manage document</a>
+</div>
+{% if document.status == "ready" %}
+    {% include "qa/partials/ready.html" %}
+{% elif document.status == "failed" %}
+    {% include "qa/partials/failed.html" %}
+{% else %}
+    {% include "qa/partials/processing.html" %}
+{% endif %}
 {% endblock %}

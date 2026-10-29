@@ -1,0 +1,12 @@
+<div class="card failed-card">
+    <span class="status-badge failed">Processing failed</span>
+    <p class="processing-error">{{ document.processing_error|default:"We couldn’t read this document. Please try again." }}</p>
+    <p class="muted-copy">Check that the PDF contains selectable text or upload a UTF-8 TXT file.</p>
+    <div class="document-actions">
+        <form method="post" action="{% url 'retry_document' document.id %}">
+            {% csrf_token %}
+            <button type="submit" class="small-action retry-action">Retry processing</button>
+        </form>
+        <a class="small-action" href="{% url 'manage_document' document.id %}">Manage file</a>
+    </div>
+</div>

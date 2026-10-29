@@ -1,43 +1,111 @@
 {% extends "qa/base.html" %}
 
-{% block title %}DocuMind — Upload{% endblock %}
+{% block title %}DocuMind — Your library{% endblock %}
 
 {% block content %}
-    <h1>Upload a document</h1>
-    <p class="subtitle">Add a PDF or text file, then ask it questions.</p>
+<section class="library-heading">
+    <div>
+        <span class="eyebrow auth-eyebrow">YOUR KNOWLEDGE SPACE</span>
+        <h1>Your library</h1>
+        <p class="subtitle">Keep documents together and ask questions grounded in their content.</p>
+    </div>
+    <span class="library-count">{{ documents|length }} document{{ documents|length|pluralize }}</span>
+</section>
 
+{% if messages %}
+    <div class="message-stack">{% for message in messages %}<p class="message {{ message.tags }}">{{ message }}</p>{% endfor %}</div>
+{% endif %}
+
+<section class="dashboard-tools">
     <div class="card">
-        <form method="post" enctype="multipart/form-data">
+        <span class="eyebrow auth-eyebrow">ADD TO YOUR LIBRARY</span>
+        <h2>Upload a document</h2>
+        <p class="muted-copy">PDF or TXT, up to 25 MB. We’ll extract its text and prepare it for questions.</p>
+        <form method="post" enctype="multipart/form-data" class="stacked-form">
             {% csrf_token %}
             {{ form.as_p }}
-            <button type="submit">Upload & process</button>
+            <button type="submit" class="primary-button">Upload & process <span aria-hidden="true">→</span></button>
         </form>
     </div>
-
     <div class="card">
-        <h2 style="margin-top:0;font-size:1.1rem;">Your documents</h2>
-
-        {% if documents %}
-            <ul class="doc-grid">
-                {% for doc in documents %}
-                    <li style="position:relative;">
-                        <a href="{% url 'ask' doc.id %}" class="doc-card">
-                            <div class="doc-icon">{{ doc.file.name|slice:"-3:"|upper }}</div>
-                            <div class="doc-name">{{ doc.file.name|cut:"documents/" }}</div>
-                            <div class="doc-meta">
-                                <span class="doc-date">{{ doc.uploaded_at|date:"M j" }}</span>
-                                <span class="status-badge {{ doc.status }}">{{ doc.get_status_display }}</span>
-                            </div>
-                        </a>
-                        <form method="post" action="{% url 'delete_document' doc.id %}" style="position:absolute;top:10px;right:10px;">
-                            {% csrf_token %}
-                            <button type="submit" onclick="return confirm('Delete this document?')" style="background:var(--danger-bg);color:var(--danger-text);border:none;border-radius:6px;padding:4px 8px;font-size:0.75rem;cursor:pointer;">✕</button>
-                        </form>
-                    </li>
+        <span class="eyebrow auth-eyebrow">ORGANIZE</span>
+        <h2>Create a collection</h2>
+        <p class="muted-copy">Group related documents so you can ask across them together.</p>
+        <form method="post" action="{% url 'create_collection' %}" class="inline-form">
+            {% csrf_token %}
+            {{ collection_form.name }}
+            <button type="submit">Create</button>
+            {% if collection_form.name.errors %}<div class="field-errors">{{ collection_form.name.errors }}</div>{% endif %}
+        </form>
+        {% if collections %}
+            <div class="collection-list">
+                {% for collection in collections %}
+                    <a class="collection-row" href="{% url 'collection_ask' collection.id %}">
+                        <span class="collection-glyph">▧</span>
+                        <span class="collection-label"><strong>{{ collection.name }}</strong><small>{{ collection.ready_count }} ready / {{ collection.document_count }} documents</small></span>
+                        <span aria-hidden="true">→</span>
+                    </a>
                 {% endfor %}
-            </ul>
+            </div>
         {% else %}
-            <p class="empty-state">No documents yet — upload one above.</p>
+            <p class="empty-hint">Your collections will appear here.</p>
         {% endif %}
     </div>
+</section>
+
+<section class="library-section">
+    <div class="section-heading"><div><span class="eyebrow auth-eyebrow">DOCUMENTS</span><h2>All documents</h2></div><span class="muted-copy">Search, sort, and manage your files</span></div>
+    <form method="get" class="filter-bar">
+        <label class="visually-hidden" for="document-search">Search documents</label>
+        <input id="document-search" type="search" name="q" value="{{ query }}" placeholder="Search document names">
+        <select name="collection" aria-label="Filter by collection">
+            <option value="">All collections</option>
+            {% for collection in collections %}<option value="{{ collection.id }}" {% if collection_filter == collection.id|stringformat:"s" %}selected{% endif %}>{{ collection.name }}</option>{% endfor %}
+        </select>
+        <select name="status" aria-label="Filter by status">
+            <option value="">All statuses</option>
+            <option value="ready" {% if status_filter == "ready" %}selected{% endif %}>Ready</option>
+            <option value="processing" {% if status_filter == "processing" %}selected{% endif %}>Processing</option>
+            <option value="failed" {% if status_filter == "failed" %}selected{% endif %}>Failed</option>
+        </select>
+        <select name="sort" aria-label="Sort documents">
+            <option value="newest" {% if sort == "newest" %}selected{% endif %}>Newest</option>
+            <option value="oldest" {% if sort == "oldest" %}selected{% endif %}>Oldest</option>
+            <option value="name" {% if sort == "name" %}selected{% endif %}>Name</option>
+        </select>
+        <button type="submit" class="filter-button">Apply</button>
+        {% if query or status_filter or collection_filter %}<a class="clear-filters" href="{% url 'upload' %}">Clear</a>{% endif %}
+    </form>
+
+    {% if documents %}
+        <ul class="doc-grid">
+            {% for doc in documents %}
+                <li class="document-item">
+                    <div class="doc-card document-card">
+                        <div class="doc-icon">{{ doc.file.name|slice:"-3:"|upper }}</div>
+                        <div class="doc-name" title="{{ doc.title }}">{{ doc.title }}</div>
+                        <div class="doc-meta">
+                            <span class="doc-date">{{ doc.uploaded_at|date:"M j, Y" }}</span>
+                            <span class="status-badge {{ doc.status }}">{{ doc.get_status_display }}</span>
+                        </div>
+                        {% if doc.collection %}<span class="document-collection">{{ doc.collection.name }}</span>{% endif %}
+                        {% if doc.processing_error %}<p class="processing-error">{{ doc.processing_error }}</p>{% endif %}
+                        <div class="document-actions">
+                            {% if doc.status == "ready" %}<a class="small-action primary-action" href="{% url 'ask' doc.id %}">Ask</a>{% endif %}
+                            <a class="small-action" href="{% url 'manage_document' doc.id %}">Manage</a>
+                            {% if doc.status == "failed" %}
+                                <form method="post" action="{% url 'retry_document' doc.id %}">{% csrf_token %}<button type="submit" class="small-action retry-action">Retry</button></form>
+                            {% endif %}
+                            <form method="post" action="{% url 'delete_document' doc.id %}" onsubmit="return confirm('Delete this document and its extracted text?')">
+                                {% csrf_token %}<button type="submit" class="small-action delete-action">Delete</button>
+                            </form>
+                        </div>
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <div class="card empty-library"><span class="empty-orbit">✳</span><h3>No matching documents</h3><p class="muted-copy">Upload a PDF or TXT file, or adjust your filters.</p></div>
+    {% endif %}
+</section>
 {% endblock %}

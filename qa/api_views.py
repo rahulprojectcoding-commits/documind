@@ -1,11 +1,16 @@
+import logging
+
 from rest_framework import generics, permissions
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework import status
 from .models import Document
 from .serializers import DocumentSerializer, QuestionSerializer
 from .tasks import process_document_task
-from .retrieval import get_relevant_chunks
-from .llm import answer_question
+from .models import Collection
+from .services import answer_for_documents
+
+logger = logging.getLogger(__name__)
 
 
 class DocumentListCreateView(generics.ListCreateAPIView):
@@ -17,7 +22,13 @@ class DocumentListCreateView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         document = serializer.save(owner=self.request.user)
-        process_document_task.delay(document.id)
+        try:
+            process_document_task.delay(document.id)
+        except Exception:
+            logger.exception("Could not queue API upload %s", document.id)
+            document.status = "failed"
+            document.processing_error = "The document could not be queued. Please retry."
+            document.save(update_fields=["status", "processing_error"])
 
 
 class DocumentDetailView(generics.RetrieveAPIView):
@@ -43,8 +54,65 @@ class AskAPIView(APIView):
         serializer.is_valid(raise_exception=True)
         question = serializer.validated_data["question"]
 
-        chunks = get_relevant_chunks(document, question)
-        context_text = "\n\n".join(chunk.text for chunk in chunks)
-        answer = answer_question(context_text, question)
+        try:
+            answer, sources, record = answer_for_documents(
+                owner=request.user,
+                question=question,
+                documents=[document],
+                document=document,
+            )
+        except Exception:
+            logger.exception("API answer generation failed for document %s", document.id)
+            return Response(
+                {"error": "We couldn’t answer that right now. Please try again."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
 
-        return Response({"question": question, "answer": answer})
+        return Response({
+            "question": question,
+            "answer": answer,
+            "sources": sources,
+            "answer_id": record.id,
+        })
+
+
+class AskCollectionAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, collection_id):
+        collection = generics.get_object_or_404(
+            Collection,
+            id=collection_id,
+            owner=request.user,
+        )
+        documents = list(
+            collection.documents.filter(owner=request.user, status="ready")
+        )
+        if not documents:
+            return Response(
+                {"error": "Collection has no processed documents yet."},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        serializer = QuestionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        question = serializer.validated_data["question"]
+        try:
+            answer, sources, record = answer_for_documents(
+                owner=request.user,
+                question=question,
+                documents=documents,
+                collection=collection,
+            )
+        except Exception:
+            logger.exception("API answer generation failed for collection %s", collection.id)
+            return Response(
+                {"error": "We couldn’t answer that right now. Please try again."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        return Response({
+            "question": question,
+            "answer": answer,
+            "sources": sources,
+            "answer_id": record.id,
+        })

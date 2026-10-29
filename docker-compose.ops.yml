@@ -1,0 +1,60 @@
+# Optional production override. Use with the EC2-only docker-compose.prod.yml:
+# docker compose -f docker-compose.prod.yml -f docker-compose.ops.yml up -d
+services:
+  web:
+    environment:
+      MEDIA_ROOT: /app/media
+    volumes:
+      - documind-media:/app/media
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:8000/health/', headers={'X-Forwarded-Proto': 'https'}), timeout=5)",
+        ]
+      interval: 30s
+      timeout: 8s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  worker:
+    environment:
+      MEDIA_ROOT: /app/media
+    volumes:
+      - documind-media:/app/media
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  nginx:
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  db:
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  redis:
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  documind-media:

@@ -1,3 +1,33 @@
 {% extends "qa/base.html" %}
 {% block title %}DocuMind — Log in{% endblock %}{% block body_class %}auth-page{% endblock %}
-{% block shell %}<div class="auth-layout"><aside class="auth-visual"><a href="{% url 'login' %}" class="brand auth-brand"><span class="brand-mark">D</span><span>documind<span class="brand-period">.</span></span></a><div class="visual-copy"><span class="eyebrow"><span class="eyebrow-line"></span> YOUR KNOWLEDGE, CONNECTED</span><h1>Good questions<br>start with <em>good sources.</em></h1><p>Bring your documents together. Find the answers hiding inside them.</p></div><div class="visual-bottom"><span class="visual-orbit">✳</span><span>Read less. Understand more.</span><span class="visual-index">01 / 03</span></div></aside><main class="auth-main"><button id="theme-toggle" class="theme-toggle auth-theme" type="button" aria-label="Toggle color theme">◐</button><div class="auth-form-wrap"><span class="eyebrow auth-eyebrow">WELCOME BACK</span><h2>Log in to your space</h2><p class="auth-intro">Pick up where your curiosity left off.</p><div class="auth-card"><form method="post">{% csrf_token %}{{ form.as_p }}<button type="submit" class="primary-button">Log in <span>→</span></button></form></div><p class="auth-switch">New to DocuMind? <a href="{% url 'signup' %}">Create an account ↗</a></p></div><p class="auth-legal">A calmer way to work with what you know.</p></main></div>{% endblock %}
+{% block shell %}
+<div class="auth-layout">
+    <aside class="auth-visual">
+        <a href="{% url 'login' %}" class="brand auth-brand"><span class="brand-mark">D</span><span>documind<span class="brand-period">.</span></span></a>
+        <div class="visual-copy">
+            <span class="eyebrow"><span class="eyebrow-line"></span> YOUR KNOWLEDGE, CONNECTED</span>
+            <h1>Good questions<br>start with <em>good sources.</em></h1>
+            <p>Bring your documents together. Find the answers hiding inside them.</p>
+        </div>
+        <div class="visual-bottom"><span class="visual-orbit">✳</span><span>Read less. Understand more.</span><span class="visual-index">01 / 03</span></div>
+    </aside>
+    <main class="auth-main">
+        <button id="theme-toggle" class="theme-toggle auth-theme" type="button" aria-label="Toggle color theme">◐</button>
+        <div class="auth-form-wrap">
+            <span class="eyebrow auth-eyebrow">WELCOME BACK</span>
+            <h2>Log in to your space</h2>
+            <p class="auth-intro">Pick up where your curiosity left off.</p>
+            <div class="auth-card">
+                <form method="post">
+                    {% csrf_token %}
+                    {{ form.as_p }}
+                    <p class="forgot-password"><a href="{% url 'password_reset' %}">Forgot your password?</a></p>
+                    <button type="submit" class="primary-button">Log in <span>→</span></button>
+                </form>
+            </div>
+            <p class="auth-switch">New to DocuMind? <a href="{% url 'signup' %}">Create an account ↗</a></p>
+        </div>
+        <p class="auth-legal">A calmer way to work with what you know.</p>
+    </main>
+</div>
+{% endblock %}

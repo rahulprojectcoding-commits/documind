@@ -35,8 +35,8 @@ class AskViewTests(TestCase):
             file="documents/example.pdf", owner=self.alice, status="ready"
         )
 
-    @patch("qa.views.answer_question")
-    @patch("qa.views.get_relevant_chunks")
+    @patch("qa.services.answer_question")
+    @patch("qa.services.get_relevant_chunks")
     def test_owner_gets_an_answer(self, mock_get_chunks, mock_answer):
         mock_get_chunks.return_value = []
         mock_answer.return_value = "The company was founded in 2015."

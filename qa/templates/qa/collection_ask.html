@@ -1,0 +1,27 @@
+{% extends "qa/base.html" %}
+
+{% block title %}DocuMind — {{ collection.name }}{% endblock %}
+
+{% block content %}
+<p class="breadcrumb"><a href="{% url 'upload' %}">← Your library</a></p>
+<div class="document-page-heading">
+    <div><span class="eyebrow auth-eyebrow">COLLECTION Q&A</span><h1>{{ collection.name }}</h1><p class="subtitle">Ask across {{ ready_documents|length }} ready document{{ ready_documents|length|pluralize }}.</p></div>
+</div>
+<section class="collection-documents card">
+    <h2>Documents in this collection</h2>
+    {% if documents %}
+        <ul class="collection-document-list">
+            {% for doc in documents %}
+                <li><span class="status-dot {{ doc.status }}"></span><span class="collection-document-name">{{ doc.title }}</span><span class="status-badge {{ doc.status }}">{{ doc.get_status_display }}</span><a href="{% url 'manage_document' doc.id %}">Manage</a></li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="muted-copy">This collection is empty. Add documents from your library.</p>
+    {% endif %}
+</section>
+{% if ready_documents %}
+    {% include "qa/partials/ready.html" %}
+{% else %}
+    <div class="card empty-library"><h3>No documents ready yet</h3><p class="muted-copy">Once a document finishes processing, you can ask questions across the collection.</p><a class="btn" href="{% url 'upload' %}">Go to your library</a></div>
+{% endif %}
+{% endblock %}

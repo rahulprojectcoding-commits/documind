@@ -1,31 +1,52 @@
 <div id="status-poll">
-    <div class="card">
-        <form
-            method="post"
-            action="{% url 'ask' document.id %}"
-            hx-post="{% url 'ask' document.id %}"
-            hx-target="#status-poll"
-            hx-swap="outerHTML"
-            hx-indicator="#ask-loading"
-        >
+    <div class="card ask-card">
+        <form method="post" action="{% if collection %}{% url 'collection_ask' collection.id %}{% else %}{% url 'ask' document.id %}{% endif %}" {% if not collection %}hx-post="{% url 'ask' document.id %}" hx-target="#status-poll" hx-swap="outerHTML" hx-indicator="#ask-loading"{% endif %}>
             {% csrf_token %}
             {{ form.as_p }}
-            <button type="submit">Ask</button>
-            <span id="ask-loading" class="htmx-indicator">
-                <span class="spinner"></span>
-                <span style="color:var(--text-muted);font-size:0.9rem;">Thinking…</span>
-            </span>
+            <button type="submit" class="primary-button">Ask your documents <span aria-hidden="true">→</span></button>
+            <span id="ask-loading" class="htmx-indicator"><span class="spinner"></span><span class="muted-copy">Searching your sources…</span></span>
         </form>
-
+        {% if error %}<div class="error-box" role="alert">{{ error }}</div>{% endif %}
         {% if answer %}
-            <div class="answer-box">
+            <article class="answer-box">
+                <span class="eyebrow auth-eyebrow">GROUNDED ANSWER</span>
                 <h3>Answer</h3>
-                <p style="margin:0;">{{ answer }}</p>
-            </div>
-        {% endif %}
-
-        {% if error %}
-            <div class="error-box">{{ error }}</div>
+                <p class="answer-copy">{{ answer }}</p>
+                {% if sources %}
+                    <div class="sources-list">
+                        <h4>Sources</h4>
+                        {% for source in sources %}
+                            <details class="source-item" open>
+                                <summary><span class="source-tag">[{{ source.label }}]</span> {{ source.document_title }}{% if source.page_number %} · page {{ source.page_number }}{% else %} · section {{ source.chunk_order|add:1 }}{% endif %}</summary>
+                                <p>{{ source.text|truncatechars:420 }}</p>
+                            </details>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                {% if answer_record %}
+                    <form class="feedback-form" method="post" action="{% url 'answer_feedback' answer_record.id %}">
+                        {% csrf_token %}
+                        <span>Was this helpful?</span>
+                        <button type="submit" name="rating" value="helpful" class="feedback-button">👍 Helpful</button>
+                        <button type="submit" name="rating" value="not_helpful" class="feedback-button">👎 Not helpful</button>
+                    </form>
+                {% endif %}
+            </article>
         {% endif %}
     </div>
+
+    {% if history %}
+        <section class="history-panel">
+            <div class="section-heading"><div><span class="eyebrow auth-eyebrow">SAVED Q&A</span><h2>Recent questions</h2></div><a class="text-link" href="{% url 'history' %}">Full history →</a></div>
+            {% for item in history %}
+                {% if not answer_record or item.id != answer_record.id %}
+                    <details class="history-item">
+                        <summary><span>{{ item.question }}</span><time>{{ item.created_at|date:"M j, Y · H:i" }}</time></summary>
+                        <p>{{ item.answer }}</p>
+                        {% if item.sources %}<p class="history-source-line">Sources: {% for source in item.sources %}<span class="source-tag">[{{ source.label }}]</span> {{ source.document_title }}{% if source.page_number %}, p. {{ source.page_number }}{% endif %}{% if not forloop.last %}; {% endif %}{% endfor %}</p>{% endif %}
+                    </details>
+                {% endif %}
+            {% endfor %}
+        </section>
+    {% endif %}
 </div>

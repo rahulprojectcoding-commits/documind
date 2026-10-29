@@ -1,0 +1,29 @@
+{% extends "qa/base.html" %}
+
+{% block title %}DocuMind — Question history{% endblock %}
+
+{% block content %}
+<section class="library-heading">
+    <div><span class="eyebrow auth-eyebrow">YOUR WORK</span><h1>Question history</h1><p class="subtitle">Revisit answers and the sources behind them.</p></div>
+    <a class="small-action" href="{% url 'upload' %}">Your library</a>
+</section>
+{% if history %}
+    <div class="history-list">
+        {% for item in history %}
+            <article class="card history-card">
+                <div class="history-context">{% if item.collection_id %}<a href="{% url 'collection_ask' item.collection_id %}">{{ item.collection.name }}</a>{% elif item.document_id %}<a href="{% url 'ask' item.document_id %}">{{ item.document.title }}</a>{% else %}Deleted document{% endif %}<time>{{ item.created_at|date:"M j, Y · H:i" }}</time></div>
+                <h2>{{ item.question }}</h2>
+                <p class="answer-copy">{{ item.answer }}</p>
+                {% if item.sources %}
+                    <div class="sources-list"><h4>Sources</h4>{% for source in item.sources %}<details class="source-item"><summary><span class="source-tag">[{{ source.label }}]</span> {{ source.document_title }}{% if source.page_number %} · page {{ source.page_number }}{% else %} · section {{ source.chunk_order|add:1 }}{% endif %}</summary><p>{{ source.text|truncatechars:420 }}</p></details>{% endfor %}</div>
+                {% endif %}
+                <form class="feedback-form" method="post" action="{% url 'answer_feedback' item.id %}">
+                    {% csrf_token %}<span>Helpful?</span><button type="submit" name="rating" value="helpful" class="feedback-button">👍</button><button type="submit" name="rating" value="not_helpful" class="feedback-button">👎</button>
+                </form>
+            </article>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="card empty-library"><span class="empty-orbit">✳</span><h3>No questions yet</h3><p class="muted-copy">Ask a question about a ready document to start your history.</p><a class="btn" href="{% url 'upload' %}">Go to your library</a></div>
+{% endif %}
+{% endblock %}

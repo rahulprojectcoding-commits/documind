@@ -109,7 +109,7 @@ STATICFILES_DIRS = [BASE_DIR / "qa" / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_ROOT = Path(os.environ.get("MEDIA_ROOT", BASE_DIR / "media"))
 
 STORAGES = {
     "default": {
@@ -136,7 +136,39 @@ MAILERS = {
 
 DEFAULT_FROM_EMAIL = os.environ.get("EMAIL_HOST_USER", "")
 
+# Reset links are single-use and expire after one hour.
+PASSWORD_RESET_TIMEOUT = 60 * 60
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "standard",
+        },
+    },
+    "formatters": {
+        "standard": {
+            "format": "%(asctime)s %(levelname)s %(name)s %(message)s",
+        },
+    },
+    "loggers": {
+        "qa": {
+            "handlers": ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "django.request": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+    },
+}
 
 if not DEBUG:
     SECURE_SSL_REDIRECT = os.environ.get("SECURE_SSL_REDIRECT", "True") == "True"
