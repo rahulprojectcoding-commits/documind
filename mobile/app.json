@@ -1,0 +1,19 @@
+{
+  "expo": {
+    "name": "DocuMind",
+    "slug": "documind-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.documind.mobile"
+    },
+    "android": {
+      "package": "com.documind.mobile",
+      "edgeToEdgeEnabled": true
+    },
+    "plugins": ["expo-document-picker", "expo-secure-store"]
+  }
+}

@@ -113,6 +113,7 @@ This keeps prompts focused, makes retrieval observable, and provides a practical
 - [Tech Stack](#-tech-stack)
 - [Run Locally](#-run-locally)
 - [REST API](#-rest-api)
+- [Mobile app](#-mobile-app)
 - [Testing](#-testing)
 - [Docker](#-docker)
 - [Production Deployment](#-production-deployment)
@@ -436,6 +437,7 @@ Authenticated session
 ```
 
 OTP codes expire after **10 minutes** and cannot be reused after successful verification.
+Mobile OTP verification locks a code after five incorrect attempts.
 
 ---
 
@@ -809,18 +811,20 @@ Every protected request requires:
 Authorization: Token <your_token>
 ```
 
-## Get a token
+## Mobile sign-in (OTP required)
 
-```http
-POST /api/token/
-```
+POST /api/auth/login/ accepts a JSON username and password. If the credentials
+are valid, DocuMind emails a six-digit code. Exchange it at
+POST /api/auth/verify-otp/ with the same username and the code to receive an
+API token.
 
-Example:
+Store the token in the device secure store and send it in the
+Authorization: Token YOUR_TOKEN header. Login and OTP verification are
+rate-limited. The old password-only /api/token/ route is removed so it cannot
+bypass email verification.
 
-```bash
-curl -X POST http://127.0.0.1:8000/api/token/ \
-  -d "username=YOUR_USERNAME&password=YOUR_PASSWORD"
-```
+GET /api/auth/me/ returns basic account details. POST /api/auth/logout/ revokes
+the current token.
 
 ---
 
@@ -904,6 +908,35 @@ If the document is still being processed:
 
 ---
 
+# 📱 Mobile app
+
+The mobile/ folder contains a React Native app built with Expo SDK 57. It
+supports OTP sign-in, secure token storage, PDF/TXT upload, document processing
+status, and document Q&A with source/page citations.
+
+From the mobile/ directory, run npm install and then npx expo start.
+
+The app defaults to the production HTTPS site. To use a local API, create
+mobile/.env from .env.example and set EXPO_PUBLIC_API_BASE_URL to a URL
+reachable by your phone (for example, your computer LAN IP, not localhost).
+Existing website accounts can sign in; account creation and password reset
+remain on the website.
+
+### Build an installable Android APK
+
+Install Node.js 22.13 or newer and npm on your computer, then from mobile/ run:
+
+    npm install
+    npx eas-cli@latest login
+    npx eas-cli@latest build:configure
+    npx eas-cli@latest build --platform android --profile preview
+
+The first EAS setup links the app to your Expo account. When the cloud build
+finishes, open the build page on your Android phone and download/install the
+APK. Android may ask you to allow installing apps from that browser. The
+preview profile is for direct device installation; the production profile
+builds an Android App Bundle for Google Play.
+
 # 🧪 Testing
 
 Run the full test suite with:
@@ -912,7 +945,7 @@ Run the full test suite with:
 python manage.py test
 ```
 
-The current suite contains **15 tests** covering:
+The current suite contains **32 tests** covering:
 
 - Model behavior
 - Default document status

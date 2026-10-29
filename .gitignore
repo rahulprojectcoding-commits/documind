@@ -26,6 +26,11 @@ celerybeat.pid
 .vscode/
 .idea/
 
+# React Native / Expo
+node_modules/
+.expo/
+web-build/
+
 # OS
 .DS_Store
 Thumbs.db

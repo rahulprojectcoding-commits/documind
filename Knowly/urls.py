@@ -17,11 +17,14 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path,include
 from django.contrib.auth import views as auth_views
-from rest_framework.authtoken.views import obtain_auth_token
+from qa import api_views
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("logout/", auth_views.LogoutView.as_view(next_page="login"), name="logout"),
-    path("api/token/", obtain_auth_token, name="api_token"),
+    path("api/auth/login/", api_views.MobileLoginAPIView.as_view(), name="api_mobile_login"),
+    path("api/auth/verify-otp/", api_views.MobileVerifyOTPAPIView.as_view(), name="api_mobile_verify_otp"),
+    path("api/auth/logout/", api_views.MobileLogoutAPIView.as_view(), name="api_mobile_logout"),
+    path("api/auth/me/", api_views.MobileMeAPIView.as_view(), name="api_mobile_me"),
     path("", include("qa.urls")),
 ]
