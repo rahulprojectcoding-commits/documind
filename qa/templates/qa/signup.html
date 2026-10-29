@@ -1,18 +1,3 @@
 {% extends "qa/base.html" %}
-
-{% block title %}DocuMind — Sign up{% endblock %}
-
-{% block content %}
-    <h1>Sign up</h1>
-    <p class="subtitle">Create an account to start uploading documents.</p>
-
-    <div class="card">
-        <form method="post">
-            {% csrf_token %}
-            {{ form.as_p }}
-            <button type="submit">Sign up</button>
-        </form>
-    </div>
-
-    <p class="auth-switch">Already have an account? <a href="{% url 'login' %}">Log in</a></p>
-{% endblock %}
+{% block title %}DocuMind — Sign up{% endblock %}{% block body_class %}auth-page{% endblock %}
+{% block shell %}<div class="auth-layout"><aside class="auth-visual"><a href="{% url 'login' %}" class="brand auth-brand"><span class="brand-mark">D</span><span>documind<span class="brand-period">.</span></span></a><div class="visual-copy"><span class="eyebrow"><span class="eyebrow-line"></span> A SPACE FOR YOUR IDEAS</span><h1>Your documents.<br>Your <em>own answers.</em></h1><p>Create your private workspace and start asking better questions.</p></div><div class="visual-bottom"><span class="visual-orbit">✳</span><span>Knowledge, made useful.</span><span class="visual-index">02 / 03</span></div></aside><main class="auth-main"><button id="theme-toggle" class="theme-toggle auth-theme" type="button" aria-label="Toggle color theme">◐</button><div class="auth-form-wrap"><span class="eyebrow auth-eyebrow">GET STARTED</span><h2>Create your account</h2><p class="auth-intro">A thoughtful home for the things you read.</p><div class="auth-card"><form method="post">{% csrf_token %}{{ form.as_p }}<button type="submit" class="primary-button">Create account <span>→</span></button></form></div><p class="auth-switch">Already have an account? <a href="{% url 'login' %}">Log in ↗</a></p></div><p class="auth-legal">A calmer way to work with what you know.</p></main></div>{% endblock %}
