@@ -14,33 +14,27 @@
 
 DocuMind is a full-stack Django application for asking natural-language questions about uploaded **PDF and TXT documents**.
 
-It uses **Retrieval-Augmented Generation (RAG)** to retrieve the most relevant parts of a document and provide only that context to Google's Gemini model before generating an answer.
+It uses **Retrieval-Augmented Generation (RAG)** to retrieve relevant passages from a document or collection and provide only those excerpts to Google's Gemini model. Answers include source labels and, for PDF files, page references.
 
 ```text
-Upload document
+Upload PDF/TXT (up to 25 MB)
       ↓
-Extract text
+Extract PDF pages or TXT text
       ↓
-Split into overlapping chunks
+Chunk, embed, and store in PostgreSQL + pgvector
       ↓
-Generate embeddings
+Ask about a document or ready collection
       ↓
-Store in PostgreSQL + pgvector
+Retrieve up to five matching chunks
       ↓
-Embed user question
-      ↓
-Retrieve top-5 matching chunks
-      ↓
-Send context + question to Gemini
-      ↓
-Return grounded answer
+Generate a grounded answer with source references
 ```
 
 ---
 
 ## 📸 Screenshots
 
-The screenshots follow the main DocuMind workflow, from signing in to asking questions and reviewing grounded answers with sources.
+The gallery follows the user workflow from sign-in and verification through document upload, library organization, and grounded Q&A.
 
 ### 1. Sign in
 ![DocuMind login screen](screenshots/01_documind_login.png)
@@ -61,23 +55,26 @@ The screenshots follow the main DocuMind workflow, from signing in to asking que
 ![Document question interface](screenshots/06_rag_question_interface.png)
 
 ### 7. Inspect a chunking answer and its source
-![Answer about chunking with a cited source](screenshots/07_chunking_answer_and_citation.png)
+![Example answer about chunking with a cited source](screenshots/07_chunking_answer_and_citation.png)
 
-### 8. See a retrieval latency answer
-![Vector retrieval latency answer with source](screenshots/08_vector_retrieval_latency_answer.png)
+### 8. See a retrieval latency answer from an uploaded design document
+![Example answer about a source document's vector retrieval latency target](screenshots/08_vector_retrieval_latency_answer.png)
 
-### 9. See a tenant isolation answer
-![Tenant isolation answer](screenshots/09_tenant_isolation_answer.png)
+### 9. Ask about tenant isolation in a source document
+![Example answer about tenant isolation described by an uploaded source](screenshots/09_tenant_isolation_answer.png)
 
-### 10. Explore the document ingestion workflow
-![Document ingestion workflow answer](screenshots/10_document_ingestion_workflow.png)
+### 10. Ask about an ingestion workflow in a source document
+![Example answer about an ingestion workflow described by an uploaded source](screenshots/10_document_ingestion_workflow.png)
+
+> Screenshots 7–10 show answers grounded in example documents. Their chunk settings, latency targets, tenant model, and S3/HTTP 202 ingestion design belong to those documents. They are examples of cited Q&A, not DocuMind settings or benchmark results. The application behavior and configuration are documented below.
+
 ---
 
 ## ✨ Why DocuMind?
 
 A conventional LLM application might send an entire document to the model for every question.
 
-DocuMind instead retrieves only the relevant information:
+DocuMind retrieves only the most relevant information from the selected document or ready documents in a collection:
 
 ```text
 Large document
@@ -111,7 +108,9 @@ This keeps prompts focused, makes retrieval observable, and provides a practical
 | **Second factor** | Fresh email OTP on every login |
 | **Frontend** | Django templates + HTMX |
 | **API** | Django REST Framework + token authentication |
-| **Document management** | Upload, view status, delete (with cascade) |
+| **Document management** | 25 MB PDF/TXT uploads, collections, status, rename, retry, delete |
+| **Answers** | Saved question history, source excerpts, PDF page citations, feedback |
+| **Mobile** | Expo app with OTP login, secure token storage, upload, and cited Q&A |
 | **Containers** | Docker / Docker Compose |
 | **Production** | Gunicorn + nginx + Let's Encrypt |
 | **Hosting** | AWS EC2 |
@@ -120,7 +119,9 @@ This keeps prompts focused, makes retrieval observable, and provides a practical
 
 # 📚 Table of Contents
 
+- [Screenshots](#-screenshots)
 - [Features](#-features)
+- [First-Time Walkthrough](#-first-time-walkthrough)
 - [Architecture](#-architecture)
 - [How the RAG Pipeline Works](#-how-the-rag-pipeline-works)
 - [Authentication and Security](#-authentication-and-security)
@@ -144,43 +145,53 @@ This keeps prompts focused, makes retrieval observable, and provides a practical
 
 # ✨ Features
 
-### 📄 Document Q&A
-Upload a PDF or TXT document and ask questions about its contents.
+### 📚 Document library and collections
 
-### 🔍 Retrieval-Augmented Generation
-Only the most relevant document chunks are passed to Gemini for answer generation.
+Upload PDF or TXT files up to 25 MB, organize them into private collections, and ask questions across the ready documents in a collection. Search by document name, filter by collection or processing status, and sort the library by upload date or name.
 
-### ⚙️ Background ingestion
-Document extraction, chunking, and embedding happen asynchronously through Celery.
+### 📄 Document Q&A with source citations
 
-### ⚡ Live processing status
-HTMX polling updates the document state without a full page refresh.
+Ask questions about one ready document or a collection. Answers include source labels and excerpts. PDF sources include their original page number; TXT sources are identified by chunk position.
 
-### 🤖 Grounded Gemini responses
-The answer prompt instructs Gemini to use only the retrieved document context and acknowledge when the answer is not present.
+### ⚙️ Background ingestion and live status
 
-### 🔐 Authentication + OTP
-Signup requires email verification, and every login requires a fresh email OTP.
+Celery extracts text, splits it into overlapping chunks, creates embeddings, and stores them in PostgreSQL with pgvector. The library shows processing, ready, and failed states, supports retrying failed documents, and updates processing status without a full page refresh.
 
-### 👤 Multi-user isolation
-Documents are owned by users and are filtered by the authenticated user in both the web layer and API.
+### 🧠 Grounded Gemini answers
 
-### 🔌 REST API
-The same document and Q&A workflow can be accessed programmatically through a token-authenticated JSON API.
+DocuMind retrieves up to five relevant chunks and asks Gemini to answer from those excerpts, cite the supplied source labels, and say when the excerpts do not contain the answer.
 
-### 🗑️ Delete documents
-Owned documents can be deleted directly from the upload page. Deletion cascades to all associated chunks and embeddings.
+### 🕘 Saved question history and feedback
+
+Answers, questions, and retrieved sources are saved to the account. Revisit recent or full history and mark answers helpful or not helpful.
+
+### 🔐 Email OTP authentication and password recovery
+
+Signup requires email verification; each web or mobile login requires a fresh email OTP. Password reset is available through the website.
+
+### 👤 User-scoped data access
+
+Documents and collections belong to individual users. Web views, collection queries, and API endpoints scope access to the authenticated owner.
+
+### 🔌 REST API and mobile app
+
+The token-authenticated API supports OTP sign-in, document upload and listing, and document or collection Q&A. The Expo mobile app supports sign-in, upload, processing status, and cited answers.
+
+### 🗑️ Document management
+
+Rename documents, move them between your collections, retry failed processing, or delete them. Deleting a document removes its stored file and chunks; saved answers remain in question history.
 
 ### 🌙 Dark mode
-The UI supports a persisted light/dark theme preference.
+
+The web interface supports a light/dark theme preference saved in the browser.
+
+### 🐳 Containerized deployment
+
+The project includes a Docker application image and Compose configuration for local PostgreSQL/pgvector and Redis. Production deployment also uses Gunicorn, nginx, HTTPS, Celery, and persistent media storage.
 
 ### 🧪 Automated tests
-The project includes tests for models, forms, chunking, authentication, document ownership, Celery dispatch, and Q&A behavior.
 
-### 🐳 Production-ready container setup
-The application is containerized and deployed with Gunicorn, nginx, HTTPS, PostgreSQL/pgvector, Redis, and Celery.
-
----
+The test suite covers chunking, form validation, authentication, password reset, mobile OTP flows, library features, ownership, citations, feedback, Celery dispatch/retry, and Q&A behavior.
 
 # 🏗️ Architecture
 
@@ -240,185 +251,57 @@ The application is containerized and deployed with Gunicorn, nginx, HTTPS, Postg
 
 # 🧠 How the RAG Pipeline Works
 
-## 1. Document upload
+## 1. Upload and queue processing
+
+The web form and API accept PDF/TXT files up to 25 MB. They validate the extension and, for the web upload, associate the file with one of the current user's collections when selected. DocuMind creates a document with `processing` status and queues a Celery task through Redis. If queuing fails, the document is marked `failed`.
+
+## 2. Extract text while preserving PDF pages
+
+`qa/extraction.py` extracts PDF text page by page with `pypdf`. TXT files are decoded as UTF-8. Unsupported extensions are rejected, and a document with no readable text fails processing. The page number is retained for each PDF chunk so answers can point back to the source page.
+
+## 3. Split each page into overlapping chunks
+
+`qa/chunking.py` splits text on whitespace into **800-word chunks with a 100-word overlap**. PDF pages are chunked separately, so a chunk does not span two PDF pages. TXT files have no page numbers and are chunked as one text stream.
+
+## 4. Embed and store chunks
+
+Each chunk is embedded with `gemini-embedding-001` at 768 dimensions. DocuMind stores the text, vector, order, and optional PDF page number in PostgreSQL using pgvector.
+
+## 5. Retrieve context for a question
+
+For a document question, retrieval searches that document. For a collection question, it searches the ready documents in that collection. DocuMind embeds the question, ranks chunks by cosine distance, and selects up to five nearest chunks.
+
+## 6. Generate and save a cited answer
+
+DocuMind labels the retrieved excerpts (`[S1]`, `[S2]`, and so on) and sends them with the question to `gemini-3.6-flash`. The prompt treats excerpts as untrusted source material, asks the model to use only those excerpts, cite the provided labels, and report when the answer is not present. The answer, question, and source details are saved to the user's history and shown with source excerpts and PDF page numbers where available.
+
+## End-to-end workflow
 
 ```text
-User uploads PDF/TXT
+PDF/TXT upload (extension and 25 MB limit checked)
         ↓
-Django creates Document(status="processing")
+Create user-owned Document(status="processing")
         ↓
-Celery task queued through Redis
+Queue Celery task through Redis
         ↓
-HTTP request returns
+Extract PDF pages or decode TXT
+        ↓
+Split into 800-word chunks with 100-word overlap
+        ↓
+Create 768-dimensional Gemini embeddings
+        ↓
+Store chunks and vectors in PostgreSQL + pgvector
+        ↓
+Mark ready (or failed with a retry option)
+        ↓
+Embed question and retrieve up to 5 chunks
+        ↓
+Ask Gemini to answer from labeled source excerpts
+        ↓
+Save answer, source references, and question history
 ```
 
-The user does not have to wait for the complete embedding process inside the upload request.
-
----
-
-## 2. Text extraction
-
-Supported formats:
-
-```text
-.pdf
-.txt
-```
-
-The extraction layer converts both formats into plain text.
-
-- TXT files are decoded as UTF-8.
-- PDF text is extracted with `pypdf`.
-- Unsupported extensions are rejected.
-
-Implementation:
-
-```text
-qa/extraction.py
-```
-
----
-
-## 3. Chunking
-
-The current chunking configuration is:
-
-```text
-Chunk size:  800 words
-Overlap:     100 words
-```
-
-Example:
-
-```text
-Chunk 1
-[1 ................................ 800]
-
-Chunk 2
-          [701 ......................... 1500]
-
-Chunk 3
-                    [1401 ...................... 2200]
-```
-
-The overlap helps preserve context across chunk boundaries.
-
-Implementation:
-
-```text
-qa/chunking.py
-```
-
----
-
-## 4. Embeddings
-
-Every chunk is converted into a vector using:
-
-```text
-gemini-embedding-001
-```
-
-The application uses:
-
-```text
-Dimensions: 768
-```
-
-Vectors are stored directly in PostgreSQL through `pgvector`.
-
-Implementation:
-
-```text
-qa/embeddings.py
-```
-
----
-
-## 5. Retrieval
-
-When a user asks a question:
-
-```text
-Question
-   ↓
-Question embedding
-   ↓
-768-dimensional vector
-   ↓
-pgvector cosine-distance search
-   ↓
-Top 5 chunks
-```
-
-Retrieval is performed against the selected document.
-
-Implementation:
-
-```text
-qa/retrieval.py
-```
-
----
-
-## 6. Answer generation
-
-The retrieved chunks and user's question are sent to:
-
-```text
-gemini-3.6-flash
-```
-
-The prompt explicitly instructs the model to use only the supplied document text.
-
-Conceptually:
-
-```text
-Retrieved context
-      +
-User question
-      ↓
-Gemini
-      ↓
-Grounded answer
-```
-
-Implementation:
-
-```text
-qa/llm.py
-```
-
----
-
-## 7. Full ingestion flow
-
-```text
-                 ┌──────────────┐
-                 │ PDF / TXT    │
-                 └──────┬───────┘
-                        ▼
-                 ┌──────────────┐
-                 │ Text extract │
-                 └──────┬───────┘
-                        ▼
-                 ┌──────────────┐
-                 │   Chunking   │
-                 │ 800 / 100    │
-                 └──────┬───────┘
-                        ▼
-                 ┌──────────────┐
-                 │   Gemini     │
-                 │  embeddings  │
-                 └──────┬───────┘
-                        ▼
-                 ┌──────────────┐
-                 │  PostgreSQL  │
-                 │  + pgvector  │
-                 └──────────────┘
-```
-
----
+Uploaded files use Django file-system storage under `MEDIA_ROOT`; the application does not use S3 as its live file store. Screenshots 7–10 show answers about example architecture documents, not DocuMind settings or benchmark results. See the screenshot note and RAG configuration below for the distinctions.
 
 # 🔐 Authentication and Security
 
@@ -478,7 +361,7 @@ Document.objects.filter(
 )
 ```
 
-This is enforced in both the web views and API.
+This is enforced in both the web views and API. Collections are also owner-scoped. This is user-level isolation; the application does not implement a separate tenant model.
 
 A user attempting to access another user's document receives a `404`, making that document effectively invisible from their account.
 
@@ -500,106 +383,80 @@ When running with `DEBUG=False`, the application enables security-related Django
 
 # 🗃️ Data Model
 
-## Document
+### Collection
 
-Represents an uploaded document.
+A named group of documents owned by one user. Collection names are unique per user.
+
+### Document
 
 | Field | Purpose |
 |---|---|
 | `owner` | User who owns the document |
-| `file` | Uploaded PDF/TXT |
+| `file` / `display_name` | Stored PDF/TXT and optional library name |
+| `collection` | Optional collection assignment |
 | `uploaded_at` | Upload timestamp |
 | `status` | `processing`, `ready`, or `failed` |
+| `processing_error` | User-facing processing failure detail, when available |
 
-## Chunk
-
-Represents one searchable piece of a document.
+### Chunk
 
 | Field | Purpose |
 |---|---|
 | `document` | Parent document |
-| `text` | Chunk content |
+| `text` | Extracted chunk content |
 | `embedding` | 768-dimensional vector |
-| `order` | Original chunk sequence |
+| `order` | Chunk sequence within the document |
+| `page_number` | Original PDF page, or empty for TXT |
 
-## OTPCode
+### AnswerRecord and AnswerFeedback
 
-Represents a signup/login verification code.
+`AnswerRecord` stores the owner, question, answer, document or collection context, retrieved source excerpts, and creation time. `AnswerFeedback` stores a user's helpful/not-helpful rating and optional comment for an answer.
 
-| Field | Purpose |
-|---|---|
-| `user` | Associated user |
-| `code` | Six-digit OTP |
-| `purpose` | Signup or login |
-| `channel` | Email |
-| `created_at` | Creation time |
-| `expires_at` | Expiration time |
-| `is_used` | Prevents reuse |
+### OTPCode
+
+Signup and login verification codes include their channel, purpose, expiration, used state, and attempt count. Codes expire after 10 minutes; the mobile verification endpoint locks a code after five incorrect attempts.
 
 ---
 
 # 📁 Project Structure
 
 ```text
-Knowly/
-├── manage.py
-├── requirements.txt
+documind/
+├── Knowly/                 # Django settings, URLs, WSGI, and Celery app
+├── qa/                     # Web app, API, RAG pipeline, templates, and tests
+│   ├── extraction.py
+│   ├── chunking.py
+│   ├── embeddings.py
+│   ├── retrieval.py
+│   ├── services.py          # Retrieval, citations, and answer persistence
+│   ├── ingestion.py
+│   ├── tasks.py
+│   ├── models.py
+│   └── tests/
+├── mobile/                 # Expo / React Native client
+├── scripts/                # Database and media backup scripts
+├── screenshots/             # README product screenshots
+├── docker-compose.yml       # Local PostgreSQL/pgvector and Redis
+├── docker-compose.ops.yml   # Production operations override
 ├── Dockerfile
-├── docker-compose.yml
-│
-├── Knowly/
-│   ├── settings.py
-│   ├── urls.py
-│   ├── wsgi.py
-│   ├── asgi.py
-│   └── celery.py
-│
-└── qa/
-    ├── models.py
-    ├── views.py
-    ├── api_views.py
-    ├── serializers.py
-    ├── forms.py
-    ├── urls.py
-    │
-    ├── extraction.py
-    ├── chunking.py
-    ├── embeddings.py
-    ├── retrieval.py
-    ├── llm.py
-    ├── ingestion.py
-    ├── tasks.py
-    └── otp.py
-    │
-    ├── migrations/
-    ├── templates/
-    │   └── qa/
-    ├── static/
-    │   └── qa/
-    └── tests/
-        ├── test_chunking.py
-        ├── test_forms.py
-        ├── test_models.py
-        └── test_views.py
+├── manage.py
+└── requirements.txt
 ```
 
 ## Core modules
 
 | File | Responsibility |
 |---|---|
-| `extraction.py` | PDF/TXT → text |
-| `chunking.py` | Text → overlapping chunks |
-| `embeddings.py` | Text → Gemini vector |
-| `retrieval.py` | pgvector similarity search |
-| `llm.py` | Gemini prompt + answer |
-| `ingestion.py` | Coordinates the ingestion pipeline |
-| `tasks.py` | Celery task definitions |
-| `otp.py` | OTP generation + email delivery |
-| `views.py` | Web UI and authentication flows |
-| `api_views.py` | REST API |
-| `models.py` | Core database models |
-
----
+| `qa/extraction.py` | Page-aware PDF and TXT text extraction |
+| `qa/chunking.py` | 800-word chunks with 100-word overlap |
+| `qa/embeddings.py` | Gemini text embeddings |
+| `qa/retrieval.py` | pgvector cosine-distance search |
+| `qa/services.py` | Source labeling, answer generation, and history persistence |
+| `qa/llm.py` | Grounded Gemini prompt and answer generation |
+| `qa/tasks.py` | Celery ingestion jobs and processing status |
+| `qa/views.py` | Library, collections, authentication, history, and web Q&A |
+| `qa/api_views.py` | OTP-authenticated mobile and document Q&A API |
+| `qa/models.py` | Documents, collections, chunks, answer history, feedback, and OTPs |
 
 # 🛠️ Tech Stack
 
@@ -645,8 +502,8 @@ Install:
 ## 1. Clone
 
 ```bash
-git clone <your-repository-url>
-cd Knowly
+git clone https://github.com/rahulprojectcoding-commits/documind.git
+cd documind
 ```
 
 ---
@@ -695,48 +552,24 @@ The development Compose setup provides PostgreSQL/pgvector and Redis.
 
 ## 5. Configure application settings
 
-The application expects configuration for:
+Create a `.env` file in the repository root. The repository does not include a ready-to-copy root `.env.example`; the following values show the local settings to configure:
 
-```text
-DJANGO_SECRET_KEY
-DJANGO_DEBUG
-DJANGO_ALLOWED_HOSTS
-
-GEMINI_API_KEY
-
-POSTGRES_DB
-POSTGRES_USER
-POSTGRES_PASSWORD
-POSTGRES_HOST
-POSTGRES_PORT
-
-CELERY_BROKER_URL
-
-EMAIL_HOST_USER
-EMAIL_HOST_PASSWORD
+```dotenv
+DJANGO_SECRET_KEY=replace-with-a-random-secret
+DJANGO_DEBUG=True
+DJANGO_ALLOWED_HOSTS=127.0.0.1,localhost
+GEMINI_API_KEY=your-gemini-api-key
+POSTGRES_DB=documind
+POSTGRES_USER=documind
+POSTGRES_PASSWORD=documind
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+CELERY_BROKER_URL=redis://localhost:6379/0
+EMAIL_HOST_USER=your-gmail-address
+EMAIL_HOST_PASSWORD=your-google-app-password
 ```
 
-For the provided development database configuration, the defaults are:
-
-```text
-Database: documind
-User:     documind
-Password: documind
-Host:     localhost
-Port:     5432
-```
-
-The default Celery broker is:
-
-```text
-redis://localhost:6379/0
-```
-
-### Gmail OTP
-
-DocuMind currently uses Gmail SMTP for OTP emails.
-
-For Gmail accounts protected by 2-Step Verification, use a Google App Password rather than the normal account password.
+The local Compose file uses the shown PostgreSQL defaults. Keep `.env` private; it is ignored by Git. DocuMind uses Gmail SMTP for signup/login OTP and password-reset email. For Gmail accounts with 2-Step Verification, use a Google App Password.
 
 ---
 
@@ -804,24 +637,22 @@ After starting Django and Celery:
 
 ```text
 1. Open the application
-2. Create an account
-3. Verify the signup OTP
-4. Log in
-5. Verify the login OTP
-6. Upload a PDF or TXT
-7. Wait for Processing → Ready
-8. Open the document
-9. Ask a question
-10. Review the grounded answer
+2. Create an account and verify the signup email code
+3. Sign in and verify the fresh email code
+4. Upload a PDF or TXT file (up to 25 MB), optionally adding it to a collection
+5. Watch the library status change from Processing to Ready
+6. Open the document or collection and ask a question
+7. Review the grounded answer and expand its cited source excerpts
+8. Revisit the answer in History and leave helpful/not-helpful feedback
 ```
 
 ---
 
 # 🔌 REST API
 
-The API uses Django REST Framework token authentication.
+The API supports Django REST Framework token authentication for mobile and other API clients. Session authentication is also enabled for browser-based requests.
 
-Every protected request requires:
+For token-authenticated API requests, send:
 
 ```http
 Authorization: Token <your_token>
@@ -906,9 +737,13 @@ Example response:
 ```json
 {
   "question": "What is this document about?",
-  "answer": "..."
+  "answer": "...",
+  "sources": [{"label":"S1","document_title":"example.pdf","page_number":1,"text":"..."}],
+  "answer_id": 42
 }
 ```
+
+For collection Q&A, use `POST /api/collections/<id>/ask/` with the same JSON question body. Both Q&A endpoints return the answer, source details, and saved `answer_id`. The collection endpoint searches only ready documents owned by the authenticated user.
 
 If the document is still being processed:
 
@@ -961,7 +796,7 @@ Run the full test suite with:
 python manage.py test
 ```
 
-The current suite contains **32 tests** covering:
+The test suite covers:
 
 - Model behavior
 - Default document status
@@ -974,6 +809,8 @@ The current suite contains **32 tests** covering:
 - Celery task dispatch
 - Question answering
 - HTMX-aware responses
+- Collections, cross-document collection retrieval, citations, and feedback
+- Mobile OTP authentication, token revocation, and password reset
 
 External Gemini and Celery operations are mocked where appropriate, so the suite does not depend on real AI API calls.
 
@@ -1002,175 +839,33 @@ gunicorn Knowly.wsgi:application --bind 0.0.0.0:8000 --workers 3
 
 # 🌐 Production Deployment
 
-DocuMind is deployed on **AWS EC2** using Docker Compose.
+The live service runs on AWS EC2 with Docker Compose. Its deployment topology includes nginx, Django/Gunicorn, a Celery worker, PostgreSQL with pgvector, Redis, and the Gemini API. The production deployment uses HTTPS and persistent media storage.
 
-The production stack contains:
-
-```text
-nginx
-web
-worker
-db
-redis
-```
-
-Persistent volumes are used for:
-
-```text
-pgdata
-media
-certbot_www
-certbot_certs
-```
-
-## Production architecture
-
-```text
-                         Internet
-                            │
-                         :80/:443
-                            ▼
-                  ┌────────────────────┐
-                  │   nginx container  │
-                  │  HTTP → HTTPS/TLS  │
-                  └─────────┬──────────┘
-                            │
-                            ▼
-                  ┌────────────────────┐
-                  │     web container  │
-                  │ Django + Gunicorn  │
-                  │       :8000        │
-                  └──────┬─────┬───────┘
-                         │     │
-               ┌─────────┘     └─────────┐
-               ▼                         ▼
-      ┌──────────────────┐      ┌──────────────────┐
-      │ PostgreSQL       │      │ Redis            │
-      │ + pgvector       │      │ Celery broker    │
-      └────────┬─────────┘      └────────┬─────────┘
-               ▲                         │
-               │                         ▼
-               │                ┌──────────────────┐
-               └────────────────│ Celery worker    │
-                                └────────┬─────────┘
-                                         │
-                                         ▼
-                                ┌──────────────────┐
-                                │   Gemini API     │
-                                └──────────────────┘
-```
-
----
-
-## Production Compose services
-
-### `db`
-
-```text
-pgvector/pgvector:pg16
-```
-
-Stores users, documents, chunks, and vector embeddings.
-
-### `redis`
-
-```text
-redis:7-alpine
-```
-
-Celery message broker.
-
-### `web`
-
-Built from the project Dockerfile and served with Gunicorn.
-
-### `worker`
-
-Uses the same application image and runs:
-
-```bash
-celery -A Knowly worker --loglevel=info
-```
-
-### `nginx`
-
-```text
-nginx:alpine
-```
-
-Exposes:
-
-```text
-80
-443
-```
-
-and proxies traffic to:
-
-```text
-web:8000
-```
-
----
-
-# 🔒 HTTPS / nginx
-
-The production nginx configuration:
-
-- Listens on port `80`
-- Serves the Let's Encrypt ACME challenge
-- Redirects normal HTTP traffic to HTTPS
-- Listens on port `443`
-- Loads the Let's Encrypt certificate
-- Proxies requests to `web:8000`
-
-Certificates are persisted through Docker volumes.
-
-The production domain is:
-
-```text
-doccumind.duckdns.org
-```
-
----
+The repository tracks `docker-compose.yml` for local PostgreSQL/pgvector and Redis, plus `docker-compose.ops.yml` for operational settings such as persistent media, health checks, and bounded container logs. The production `docker-compose.prod.yml` and `nginx.conf` are maintained on the EC2 host and are not included in this repository. This describes the deployed topology; it does not imply that the host-only production files can be launched from a fresh clone.
 
 # ⚙️ Production Deployment Flow
 
-A typical deployment flow is:
+The deployed host-specific flow is:
 
 ```text
-Clone repository
+Prepare production environment and secrets on EC2
       ↓
-Configure production settings
+Build/pull the application image
       ↓
-Build application image
-      ↓
-Start Docker Compose production stack
+Start the host-managed production Compose stack
       ↓
 Run Django migrations
       ↓
-Verify nginx + HTTPS
+Verify database health, nginx, and HTTPS
       ↓
-Verify Celery worker
+Verify the Celery worker and Redis
       ↓
-Upload test document
+Upload a PDF/TXT document and wait for Ready
       ↓
-Run end-to-end RAG test
+Ask a question and inspect its source excerpts
 ```
 
-The production Compose file used on the EC2 server is:
-
-```text
-docker-compose.prod.yml
-```
-
-and the nginx configuration is:
-
-```text
-nginx.conf
-```
-
----
+The production Compose file and nginx configuration are host-managed rather than tracked in this repository. The tracked `docker-compose.ops.yml` is an override for the server-managed production Compose file; consult the persistent upload and operations notes below before applying it to an existing deployment.
 
 # 📌 Useful Commands
 
@@ -1371,72 +1066,65 @@ Wait for background processing to finish and retry.
 
 # 📏 RAG Configuration
 
-The current implementation uses:
+These values come from the current implementation in `qa/chunking.py`, `qa/embeddings.py`, and `qa/retrieval.py`:
 
-| Parameter | Value |
-|---|---:|
-| Chunk size | 800 words |
+| Parameter | Implemented value |
+|---|---|
+| Chunk size | 800 whitespace-separated words |
 | Chunk overlap | 100 words |
+| PDF chunking | Separately within each extracted page; page number retained |
+| TXT chunking | Single unpaginated text stream |
 | Embedding model | `gemini-embedding-001` |
 | Embedding dimensions | 768 |
-| Retrieval Top-K | 5 |
+| Retrieval | Cosine distance, up to 5 chunks |
 | Answer model | `gemini-3.6-flash` |
 | OTP lifetime | 10 minutes |
 
-These values are implementation defaults and can be tuned as retrieval evaluation improves.
+One screenshot quotes an example document recommending 700 tokens per chunk and 100 tokens of overlap. That is the recommendation in the document being queried; DocuMind's code uses 800 words and 100 words. The screenshot's under-800-ms p95 figure is also a target stated in a source document. DocuMind does not currently report a retrieval latency benchmark.
 
 ---
 
 # 🧭 Current Limitations
 
-The current project intentionally keeps the RAG pipeline straightforward.
+The current implementation focuses on straightforward vector-based document Q&A. Current limitations and possible next steps include:
 
-Potential future improvements include:
+- PDF text extraction does not preserve complex table or visual layout structure.
+- Only PDF and TXT uploads are supported.
+- Retrieval uses cosine similarity over vectors without hybrid keyword search, reranking, or query rewriting.
+- Each question is answered independently; prior questions and answers are saved in history but are not passed as conversational context to the next answer.
+- File uploads use Django file-system storage under `MEDIA_ROOT`; the application does not use S3 as its live file store. Separate backup scripts can send database and media backups to S3.
+- There are no usage tiers or billing controls.
+- SMS OTP is not implemented; OTP email delivery uses Gmail SMTP configuration.
+- The repository would benefit from broader automated RAG evaluation datasets and operational metrics.
 
-- More document formats
-- Better handling of PDF tables/layouts
-- Hybrid keyword + vector retrieval
-- Reranking
-- Query rewriting
-- Streaming responses
-- Conversation history
-- Source/page citations
-- S3-backed file storage
-- Usage tiers / billing
-- SMS OTP
-- Structured logging
-- Monitoring and metrics
-- Larger automated RAG evaluation datasets
+Source excerpts, PDF page references, saved question history, and answer feedback are implemented features.
 
 ---
 
 # 🗺️ Roadmap
 
 ```text
-[x] PDF/TXT ingestion
-[x] Text chunking
-[x] Gemini embeddings
-[x] pgvector retrieval
-[x] Gemini grounded answers
-[x] Background document processing
-[x] Email OTP authentication
-[x] REST API
-[x] User/document isolation
-[x] Docker deployment
-[x] HTTPS
-[x] Delete documents
-[x] AWS EC2 deployment
+[x] PDF/TXT ingestion with 25 MB upload validation
+[x] Page-aware PDF extraction and chunking
+[x] Gemini embeddings and pgvector retrieval
+[x] Grounded answers with source excerpts and PDF page references
+[x] Background processing, status updates, and retry for failed documents
+[x] Email OTP signup and login
+[x] User-scoped document and collection access
+[x] Collections and cross-document Q&A
+[x] Saved question history and answer feedback
+[x] REST API and Expo mobile client
+[x] Docker deployment, HTTPS, and persistent media operations
+[x] Database and media backup scripts with S3 targets
 
+[ ] Additional document formats and improved table extraction
+[ ] Hybrid retrieval, reranking, and query rewriting
+[ ] Multi-turn conversational context
+[ ] S3-backed live document storage
+[ ] Usage tiers / billing
 [ ] SMS OTP
-[ ] Billing / usage tiers
-[ ] S3-backed storage
-[ ] Advanced retrieval / reranking
-[ ] Source citations
-[ ] Structured logging & monitoring
-[ ] Expanded RAG evaluation
+[ ] Expanded RAG evaluation and operational metrics
 ```
-
----
 
 # 🎯 What This Project Demonstrates
 
