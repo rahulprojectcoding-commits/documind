@@ -40,21 +40,37 @@ Return grounded answer
 
 ## 📸 Screenshots
 
-### Login
-![Login](screenshots/documind_login.png)
+The screenshots follow the main DocuMind workflow, from signing in to asking questions and reviewing grounded answers with sources.
 
-### Sign Up
-![Sign Up](screenshots/documind_signup.png)
+### 1. Sign in
+![DocuMind login screen](screenshots/01_documind_login.png)
 
-### Email Verification (OTP)
-![OTP Verification](screenshots/otp_vericfication.png)
+### 2. Verify your email
+![Email verification screen](screenshots/02_email_verification.png)
 
-### Upload Document
-![Upload](screenshots/upload_document.png)
+### 3. Browse your library, upload documents, and organize collections
+![Document library with upload and collection controls](screenshots/03_document_library.png)
 
-### Ask a Question (RAG in action)
-![Q&A](screenshots/doccumind_QA.png)
+### 4. Ask for a document summary
+![Document Q&A with a grounded summary](screenshots/04_document_qa_summary.png)
 
+### 5. Review an answer with source citations
+![Grounded answer with cited source page](screenshots/05_grounded_answer_with_sources.png)
+
+### 6. Ask a question about a document
+![Document question interface](screenshots/06_rag_question_interface.png)
+
+### 7. Inspect a chunking answer and its source
+![Answer about chunking with a cited source](screenshots/07_chunking_answer_and_citation.png)
+
+### 8. See a retrieval latency answer
+![Vector retrieval latency answer with source](screenshots/08_vector_retrieval_latency_answer.png)
+
+### 9. See a tenant isolation answer
+![Tenant isolation answer](screenshots/09_tenant_isolation_answer.png)
+
+### 10. Explore the document ingestion workflow
+![Document ingestion workflow answer](screenshots/10_document_ingestion_workflow.png)
 ---
 
 ## ✨ Why DocuMind?
